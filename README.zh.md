@@ -1,3 +1,5 @@
+<img src="assets/icon-180.png" width="88" alt="sleep-not-permitted 图标" align="right">
+
 # 前台等待守卫 · sleep-not-permitted
 
 中文 · [English](README.md)

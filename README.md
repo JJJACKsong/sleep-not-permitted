@@ -1,3 +1,5 @@
+<img src="assets/icon-180.png" width="88" alt="sleep-not-permitted icon" align="right">
+
 # sleep-not-permitted
 
 [中文](README.zh.md) · English
