@@ -1,0 +1,51 @@
+{
+  "name": "dsh-plugin-sleep-not-permitted",
+  "version": "0.1.0",
+  "description": "Forbid foreground waiting in DSH agents: sleep/wait/tail -f and blocking wait tools are rejected with a background-job retry, so the session never freezes. · 禁止 Agent 前台等待，会话不再被 sleep / wait_agent 冻住。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./detect": "./lib/detect.js",
+    "./messages": "./lib/messages.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/detect.test.mjs test/plugin.test.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "cordis",
+    "agent",
+    "guard",
+    "sleep",
+    "background-jobs"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JJJACKsong/sleep-not-permitted.git"
+  },
+  "homepage": "https://github.com/JJJACKsong/sleep-not-permitted#readme",
+  "bugs": {
+    "url": "https://github.com/JJJACKsong/sleep-not-permitted/issues"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-tools": "^0.1.5-rc.2 || ^0.2.1-rc.3"
+  }
+}
