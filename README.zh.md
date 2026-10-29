@@ -113,7 +113,7 @@ Lead 用 `wait_agent` 等队友。超过预算的等待——比如五分钟的 
     pollWindowMs: 120000          # 轮询统计窗口（毫秒）
     interactiveGuard: true        # 拒绝需要人输入/确认的命令
     disabledInteractiveRules: []  # 按交互式规则 id 关闭个别检测
-    language: both                # both | zh | en（拒绝原因与系统提示的语言）
+    language: auto                # auto | both | zh | en（拒绝原因与系统提示的语言）
     announceInPrompt: true        # false = 只保留门禁，不写系统提示
     disabledRules: []             # 按上表 id 关掉个别规则
     extraRules:                   # 追加自定义规则；pattern 是正则字符串
@@ -126,7 +126,14 @@ Lead 用 `wait_agent` 等队友。超过预算的等待——比如五分钟的 
 配置错误（未知规则 id、空 `tools`、非法正则、非布尔开关、未知语言）在挂载期 fail-loud 报错，
 不会出现「装好了但其实没生效」的静默状态。
 
+### 文案语言
+
+`language: auto`（默认）跟随用户系统语言：依次检查 `DSH_LOCALE`、`LC_ALL` / `LC_MESSAGES` /
+`LANG`、macOS 系统语言偏好、Node 的 `Intl` 默认值，都没有则用英文。中文系统下拒绝消息与提示段
+都只出中文（提示词成本约减半）；`both` 中英双段；`zh` / `en` 显式固定。语言在挂载期解析一次。
+
 ## 安装 / 卸载
+
 
 本包是标准 DSH bundle（`dsh.bundle.patch` → `cordis.patch.yml`）：
 

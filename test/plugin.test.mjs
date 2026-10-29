@@ -3,6 +3,9 @@ import assert from 'node:assert/strict'
 
 import { apply, name, inject } from '../lib/index.js'
 
+// 固定测试环境的语言信号：默认 language: auto 在测试里解析为中文。
+process.env.DSH_LOCALE = 'zh'
+
 /** 最小 Cordis ctx 替身：记录 guard / systemPrompt.section / effect。 */
 function fakeCtx() {
   const guards = []
@@ -179,7 +182,7 @@ test('系统提示同时覆盖命令等待与工具等待', () => {
 
 test('文案语言：both / zh / en', () => {
   const both = fakeCtx()
-  apply(both.ctx, undefined)
+  apply(both.ctx, { language: 'both' })
   const bothMsg = both.guards[0](execFor('bash', { command: 'sleep 5' }))
   assert.match(bothMsg, /前台等待被禁止/)
   assert.match(bothMsg, /Foreground waiting is forbidden/)
@@ -251,11 +254,15 @@ test('轮询门禁配置校验 fail-loud', () => {
 })
 
 test('系统提示包含轮询与外部等待的指引', () => {
-  const { ctx, sections } = fakeCtx()
-  apply(ctx, undefined)
-  assert.match(sections[0].text, /轮询/)
-  assert.match(sections[0].text, /Polling|polling/)
-  assert.match(sections[0].text, /run_in_background/)
+  const zh = fakeCtx()
+  apply(zh.ctx, undefined) // auto + DSH_LOCALE=zh → 只出中文
+  assert.match(zh.sections[0].text, /轮询/)
+  assert.match(zh.sections[0].text, /run_in_background/)
+  assert.doesNotMatch(zh.sections[0].text, /Polling/)
+
+  const both = fakeCtx()
+  apply(both.ctx, { language: 'both' })
+  assert.match(both.sections[0].text, /Polling|polling/)
 })
 
 test('交互式/需确认命令被拒（前台与后台都拒）', () => {

@@ -124,7 +124,7 @@ Override the bundle patch row from the profile's `cordis.patch.yml`, or edit the
     pollWindowMs: 120000          # polling window, milliseconds
     interactiveGuard: true        # refuse commands that wait for input/confirmation
     disabledInteractiveRules: []  # switch off individual interactive rule ids
-    language: both                # both | zh | en (message + system-prompt language)
+    language: auto                # auto | both | zh | en (message + prompt language)
     announceInPrompt: true        # false = enforcement only, no prompt rule
     disabledRules: []             # switch off individual rule ids from the table
     extraRules:                   # add your own rules; pattern is a regex string
@@ -137,7 +137,16 @@ Override the bundle patch row from the profile's `cordis.patch.yml`, or edit the
 Invalid configuration fails loud at mount time (unknown rule id, empty `tools`, invalid regex,
 non-boolean switch, unknown `language`) — there is no "installed but silently inactive" state.
 
+### Message language
+
+`language: auto` (the default) follows the user's system language: it checks `DSH_LOCALE`,
+`LC_ALL` / `LC_MESSAGES` / `LANG`, then the macOS system language preference, then Node's `Intl`
+default, and falls back to English. A Chinese system gets Chinese-only messages and a
+Chinese-only prompt section (roughly half the prompt cost); `both` emits both languages; `zh` /
+`en` pin one explicitly. Resolution happens once at mount.
+
 ## Install / uninstall
+
 
 The package is a standard DSH bundle (`dsh.bundle.patch` → `cordis.patch.yml`).
 

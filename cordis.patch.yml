@@ -38,8 +38,9 @@
         # 前台则直接卡住会话。这类命令先确认，再用非交互参数重启。
         interactiveGuard: true
         disabledInteractiveRules: []   # 按规则 id 关闭（id 见 README「规则」表）
-        # 文案语言：both（中英双段，默认）/ zh / en。只留一种可以省提示词。
-        language: both
+        # 文案语言：auto（默认，跟随系统语言；中文环境只出中文）/ both / zh / en。
+        # 判定顺序：DSH_LOCALE → LC_ALL/LC_MESSAGES/LANG → macOS 系统语言偏好 → Intl → 英文。
+        language: auto
         # 事前预防：在系统提示里紧贴「后台作业」段落写同一条规则。
         announceInPrompt: true
         # 按规则 id 关掉个别检测（可用 id 见 README「规则」表）。
