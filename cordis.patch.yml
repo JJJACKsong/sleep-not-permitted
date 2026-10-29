@@ -34,6 +34,10 @@
         antiPolling: true
         pollRepeatThreshold: 3     # 同一条命令在窗口内允许出现的次数上限，再多就拒
         pollWindowMs: 120000       # 统计窗口：2 分钟
+        # 交互式/需确认命令门禁：后台拿不到输入会静默挂住（不结算、不通知），
+        # 前台则直接卡住会话。这类命令先确认，再用非交互参数重启。
+        interactiveGuard: true
+        disabledInteractiveRules: []   # 按规则 id 关闭（id 见 README「规则」表）
         # 文案语言：both（中英双段，默认）/ zh / en。只留一种可以省提示词。
         language: both
         # 事前预防：在系统提示里紧贴「后台作业」段落写同一条规则。

@@ -257,3 +257,58 @@ test('系统提示包含轮询与外部等待的指引', () => {
   assert.match(sections[0].text, /Polling|polling/)
   assert.match(sections[0].text, /until \[ -f done \]/)
 })
+
+test('交互式/需确认命令被拒（前台与后台都拒）', () => {
+  const { ctx, guards } = fakeCtx()
+  apply(ctx, undefined)
+  const commands = [
+    'sudo ls /root',
+    'ssh example.com uptime',
+    'npm login',
+    'vim notes.txt',
+    'docker run -it ubuntu bash',
+    'read -p "name: " name',
+    'rm -i file.txt',
+  ]
+  for (const command of commands) {
+    const reason = guards[0](execFor('bash', { command, description: 'x' }))
+    assert.equal(typeof reason, 'string', command)
+    assert.match(reason, /需要人输入\/确认/)
+  }
+  // 丢后台同样拒绝：拿不到输入会静默挂住，永远不会有通知。
+  const background = guards[0](execFor('bash', { command: 'ssh example.com uptime', description: 'x', run_in_background: true }))
+  assert.equal(typeof background, 'string')
+  assert.match(background, /静默挂住/)
+})
+
+test('非交互形态放行', () => {
+  const { ctx, guards } = fakeCtx()
+  apply(ctx, undefined)
+  assert.equal(guards[0](execFor('bash', { command: 'sudo -n true', description: 'x' })), undefined)
+  assert.equal(guards[0](execFor('bash', { command: 'ssh -o BatchMode=yes example.com uptime', description: 'x' })), undefined)
+  assert.equal(guards[0](execFor('bash', { command: 'ls -la /tmp', description: 'x' })), undefined)
+})
+
+test('交互式门禁可整体关闭 / 规则可按 id 关闭 / 配置 fail-loud', () => {
+  const off = fakeCtx()
+  apply(off.ctx, { interactiveGuard: false })
+  assert.equal(off.guards[0](execFor('bash', { command: 'vim notes.txt', description: 'x' })), undefined)
+
+  const partial = fakeCtx()
+  apply(partial.ctx, { disabledInteractiveRules: ['interactive-editor'] })
+  assert.equal(partial.guards[0](execFor('bash', { command: 'vim other.txt', description: 'x' })), undefined)
+  assert.equal(typeof partial.guards[0](execFor('bash', { command: 'sudo ls /root', description: 'x' })), 'string')
+
+  assert.throws(() => apply(fakeCtx().ctx, { disabledInteractiveRules: ['nope'] }), /unknown interactive rule/)
+  assert.throws(() => apply(fakeCtx().ctx, { interactiveGuard: 'yes' }), /interactiveGuard/)
+})
+
+test('系统提示覆盖失败处理、看门狗与确认优先', () => {
+  const { ctx, sections } = fakeCtx()
+  apply(ctx, undefined)
+  const text = sections[0].text
+  assert.match(text, /completed \/ failed \/ killed/)
+  assert.match(text, /看门狗/)
+  assert.match(text, /ask_user_question/)
+  assert.match(text, /BatchMode=yes/)
+})

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { detectForegroundWait } from '../lib/detect.js'
+import { detectForegroundWait, detectInteractive } from '../lib/detect.js'
 
 const hit = (command, options) => detectForegroundWait(command, options)?.id
 
@@ -73,4 +73,19 @@ test('空命令不命中', () => {
   assert.equal(hit(''), undefined)
   assert.equal(hit('   '), undefined)
   assert.equal(hit(undefined), undefined)
+})
+
+test('heredoc 正文是数据，不算命令（不误伤 commit message / 写脚本）', () => {
+  const commit = "git commit -F - <<'EOF'\nfeat: no read -p, no ssh without BatchMode, no sleep 5\nEOF"
+  assert.equal(detectForegroundWait(commit), undefined)
+  assert.equal(detectInteractive(commit), undefined)
+
+  const writeScript = "cat > run.sh <<'SH'\nsleep 5\nread -p \"x: \" y\nsudo ls\nSH"
+  assert.equal(detectForegroundWait(writeScript), undefined)
+  assert.equal(detectInteractive(writeScript), undefined)
+})
+
+test('heredoc 之后的真实命令仍然被检测', () => {
+  const command = "cat > note.txt <<'EOF'\nsleep 5 is not a command here\nEOF\nsleep 7"
+  assert.equal(detectForegroundWait(command)?.id, 'sleep')
 })

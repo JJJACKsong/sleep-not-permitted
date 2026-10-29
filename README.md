@@ -47,6 +47,11 @@ So the plugin does two things:
 - **Polling**: running the same check command more than `pollRepeatThreshold` times within
   `pollWindowMs` — the "wait a little, check, wait a little, check" substitute for sleeping. It is
   refused with the same instruction: wrap the waiting itself in a background job.
+- **Commands that need human input or confirmation**: `sudo` without `-n`, `ssh` without
+  `-o BatchMode=yes`, login/key-generation flows (`npm login`, `gh auth login`, `ssh-keygen`, …),
+  interactive editors and pagers (`vim`, `less`, `top`, …), `docker run/exec -it`, `read -p`,
+  `rm/cp/mv -i`. They are refused in the foreground *and* in the background: a background job has
+  no stdin, so it would hang silently — never settling, never notifying.
 
 If what you are waiting for has no DSH job handle (a remote host, an external service), be it a
 command or a poll: wrap the waiting itself in a background job — for example
@@ -66,6 +71,21 @@ The default budget (**30 s**) exists so short coordination waits keep working ou
 own Agent Teams guidance has the Lead wait for teammates). Waits above the budget — the five-minute
 `wait_agent(timeout_ms: 300000)` case — are rejected. Set `maxBlockingWaitMs: 0` for strict mode:
 not a single second of foreground waiting.
+
+## After a background job finishes
+
+A completion notice means the job **finished**, not that it succeeded. The notice carries the
+status (`completed` / `failed` / `killed`) plus the label; read the output and exit code with
+`job_output` before continuing, and diagnose a `failed`/`killed` job instead of retrying blindly.
+
+Background jobs have **no timeout of their own**. A job that dies mid-flight or hangs while waiting
+for something that never happens never settles — and so never notifies. Bound it yourself: wrap the
+command in `timeout N`, keep a deadline in retry loops, or write a marker/report file at the end.
+For cross-machine waits the same applies to the remote wait loop: give it a maximum wait and let it
+exit with a failure marker on timeout, so the local job always settles and always notifies.
+
+If the work needs a human decision in the middle, do not background it: confirm first
+(`ask_user_question`, or the DSH approval channel), then start it with non-interactive flags.
 
 ## Rules
 
@@ -102,6 +122,8 @@ Override the bundle patch row from the profile's `cordis.patch.yml`, or edit the
     antiPolling: true             # refuse repeated check commands (busy-poll)
     pollRepeatThreshold: 3        # max times one command may appear inside the window
     pollWindowMs: 120000          # polling window, milliseconds
+    interactiveGuard: true        # refuse commands that wait for input/confirmation
+    disabledInteractiveRules: []  # switch off individual interactive rule ids
     language: both                # both | zh | en (message + system-prompt language)
     announceInPrompt: true        # false = enforcement only, no prompt rule
     disabledRules: []             # switch off individual rule ids from the table

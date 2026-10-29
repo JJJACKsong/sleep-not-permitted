@@ -41,6 +41,10 @@ DSH 的会话是**一次一步**推进的：工具调用在前台跑多久，整
 - **轮询**：同一条检查命令在 `pollWindowMs` 窗口内出现超过 `pollRepeatThreshold` 次——也就是
   「等一会儿、check 一下、再等一会儿、再 check 一下」这种拿检查代替睡眠的写法。同样硬拒绝，
   并教它把等待包成后台作业。
+- **需要人输入/确认的命令**：`sudo` 不带 `-n`、`ssh` 不带 `-o BatchMode=yes`、登录/密钥流程
+  （`npm login`、`gh auth login`、`ssh-keygen`…）、交互式编辑器与分页器（`vim`、`less`、`top`…）、
+  `docker run/exec -it`、`read -p`、`rm/cp/mv -i`。前台后台**都拒绝**：后台作业拿不到 stdin，
+  会静默挂住——不结算、不通知。
 
 如果等的是 DSH 没有作业句柄的外部任务（远端机器、外部服务），命令和轮询都一样处理：把
 「等它结束」包成后台作业——例如 `ssh host 'until [ -f done ]; do sleep 5; done'` 加
@@ -58,6 +62,20 @@ DSH 的会话是**一次一步**推进的：工具调用在前台跑多久，整
 默认预算（**30 秒**）是为了开箱即用不误伤短协作等待：DSH 官方的 Agent Teams 指引本来就要求
 Lead 用 `wait_agent` 等队友。超过预算的等待——比如五分钟的 `wait_agent(timeout_ms: 300000)`
 ——会被拒绝。想绝对严格就设 `maxBlockingWaitMs: 0`：一秒钟都不许等。
+
+## 后台作业结束之后
+
+完成通知只代表作业**结束**，不代表成功。通知里带状态（`completed` / `failed` / `killed`）和
+作业名；继续下一步前先用 `job_output` 读输出与 exit code，`failed`/`killed` 要排查原因，
+不要盲目重跑。
+
+后台作业**自身没有超时**。中途死掉、或等待一个永远不会发生的事件而挂住的任务，永远不会结算
+——也就永远不会来通知。所以要自己加界：命令套 `timeout N`、重试循环里记 deadline、结束时写
+标记/报告文件；跨机器的等待循环同理，必须带最大等待时间，超时写失败标记后退出，保证本地作业
+一定会结算、一定会通知。
+
+如果任务中途需要人做决定，不要丢后台：先确认（`ask_user_question` 或 DSH 审批），再用非交互参数
+启动。
 
 ## 规则
 
@@ -93,6 +111,8 @@ Lead 用 `wait_agent` 等队友。超过预算的等待——比如五分钟的 
     antiPolling: true             # 拒绝重复检查命令（轮询空转）
     pollRepeatThreshold: 3        # 窗口内同一条命令允许出现的次数上限
     pollWindowMs: 120000          # 轮询统计窗口（毫秒）
+    interactiveGuard: true        # 拒绝需要人输入/确认的命令
+    disabledInteractiveRules: []  # 按交互式规则 id 关闭个别检测
     language: both                # both | zh | en（拒绝原因与系统提示的语言）
     announceInPrompt: true        # false = 只保留门禁，不写系统提示
     disabledRules: []             # 按上表 id 关掉个别规则
