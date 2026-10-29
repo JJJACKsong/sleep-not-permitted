@@ -203,3 +203,57 @@ test('文案语言：both / zh / en', () => {
 
   assert.throws(() => apply(fakeCtx().ctx, { language: 'fr' }), /language/)
 })
+
+test('轮询门禁：同一条命令超过阈值被硬拒绝', () => {
+  const { ctx, guards } = fakeCtx()
+  apply(ctx, undefined)
+  const call = () => guards[0](execFor('bash', { command: 'echo poll-probe', description: 'x' }))
+  assert.equal(call(), undefined)
+  assert.equal(call(), undefined)
+  assert.equal(call(), undefined)
+  const denied = call()
+  assert.equal(typeof denied, 'string')
+  assert.match(denied, /轮询被禁止/)
+  assert.match(denied, /run_in_background: true/)
+})
+
+test('轮询门禁：不同命令、后台调用、非 shell 工具都不算', () => {
+  const { ctx, guards } = fakeCtx()
+  apply(ctx, undefined)
+  for (let i = 0; i < 5; i += 1) {
+    assert.equal(guards[0](execFor('bash', { command: `echo distinct-${i}`, description: 'x' })), undefined)
+  }
+  for (let i = 0; i < 5; i += 1) {
+    assert.equal(guards[0](execFor('bash', { command: 'echo bg-same', description: 'x', run_in_background: true })), undefined)
+  }
+  for (let i = 0; i < 5; i += 1) assert.equal(guards[0](execFor('list_agents', {})), undefined)
+})
+
+test('轮询门禁：可关闭、阈值可调', () => {
+  const off = fakeCtx()
+  apply(off.ctx, { antiPolling: false })
+  for (let i = 0; i < 5; i += 1) {
+    assert.equal(off.guards[0](execFor('bash', { command: 'echo anti-polling-off', description: 'x' })), undefined)
+  }
+
+  const strict = fakeCtx()
+  apply(strict.ctx, { pollRepeatThreshold: 2, pollWindowMs: 60000 })
+  assert.equal(strict.guards[0](execFor('bash', { command: 'echo threshold-two', description: 'x' })), undefined)
+  assert.equal(strict.guards[0](execFor('bash', { command: 'echo threshold-two', description: 'x' })), undefined)
+  assert.equal(typeof strict.guards[0](execFor('bash', { command: 'echo threshold-two', description: 'x' })), 'string')
+})
+
+test('轮询门禁配置校验 fail-loud', () => {
+  const { ctx } = fakeCtx()
+  assert.throws(() => apply(ctx, { antiPolling: 'yes' }), /antiPolling/)
+  assert.throws(() => apply(ctx, { pollRepeatThreshold: 1 }), /pollRepeatThreshold/)
+  assert.throws(() => apply(ctx, { pollWindowMs: 0 }), /pollWindowMs/)
+})
+
+test('系统提示包含轮询与外部等待的指引', () => {
+  const { ctx, sections } = fakeCtx()
+  apply(ctx, undefined)
+  assert.match(sections[0].text, /轮询/)
+  assert.match(sections[0].text, /Polling|polling/)
+  assert.match(sections[0].text, /until \[ -f done \]/)
+})

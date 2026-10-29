@@ -37,7 +37,15 @@ DSH 的会话是**一次一步**推进的：工具调用在前台跑多久，整
 - **等待型命令**（`bash` / `pwsh` / `terminal_send`）：`sleep`、`wait`、`tail -f`、`watch`、
   无 `-c` 的 `ping`、`yes`、无限循环、跟随日志；
 - **阻塞等待型工具**：`wait_agent`、`job_output` 的 `wait: true`，且请求的等待超过预算
-  （默认 **30 秒**）。
+  （默认 **30 秒**）；
+- **轮询**：同一条检查命令在 `pollWindowMs` 窗口内出现超过 `pollRepeatThreshold` 次——也就是
+  「等一会儿、check 一下、再等一会儿、再 check 一下」这种拿检查代替睡眠的写法。同样硬拒绝，
+  并教它把等待包成后台作业。
+
+如果等的是 DSH 没有作业句柄的外部任务（远端机器、外部服务），命令和轮询都一样处理：把
+「等它结束」包成后台作业——例如 `ssh host 'until [ -f done ]; do sleep 5; done'` 加
+`run_in_background: true`（后台作业里的 sleep 是允许的）——然后结束本轮，作业完成会唤醒 agent。
+在没有本地作业可等时，这是 `sleep` 和轮询的正确替代。
 
 ## 行为
 
@@ -82,6 +90,9 @@ Lead 用 `wait_agent` 等队友。超过预算的等待——比如五分钟的 
     blockingTools: [wait_agent]   # 阻塞等待型工具：超过预算才拒
     blockingWaitFlagTools: [job_output]  # wait: true 且超过预算才拒
     maxBlockingWaitMs: 30000      # 0 = 一律拒绝前台等待
+    antiPolling: true             # 拒绝重复检查命令（轮询空转）
+    pollRepeatThreshold: 3        # 窗口内同一条命令允许出现的次数上限
+    pollWindowMs: 120000          # 轮询统计窗口（毫秒）
     language: both                # both | zh | en（拒绝原因与系统提示的语言）
     announceInPrompt: true        # false = 只保留门禁，不写系统提示
     disabledRules: []             # 按上表 id 关掉个别规则

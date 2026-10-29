@@ -44,6 +44,15 @@ So the plugin does two things:
   `ping` without `-c`, `yes`, infinite loops, log-follow modes — see the rule table below.
 - **Blocking wait tools**: `wait_agent` and `job_output` with `wait: true`, when the requested wait
   exceeds the budget (default **30 seconds**).
+- **Polling**: running the same check command more than `pollRepeatThreshold` times within
+  `pollWindowMs` — the "wait a little, check, wait a little, check" substitute for sleeping. It is
+  refused with the same instruction: wrap the waiting itself in a background job.
+
+If what you are waiting for has no DSH job handle (a remote host, an external service), be it a
+command or a poll: wrap the waiting itself in a background job — for example
+`ssh host 'until [ -f done ]; do sleep 5; done'` with `run_in_background: true` (sleep is allowed
+inside a background job) — then end the turn; that job's completion wakes the agent. This is the
+correct replacement for both `sleep` and polling when there is nothing local to await.
 
 ## Behavior
 
@@ -90,6 +99,9 @@ Override the bundle patch row from the profile's `cordis.patch.yml`, or edit the
     blockingTools: [wait_agent]   # blocking wait tools: reject above the budget
     blockingWaitFlagTools: [job_output]  # reject when wait: true and above the budget
     maxBlockingWaitMs: 30000      # 0 = reject every foreground wait
+    antiPolling: true             # refuse repeated check commands (busy-poll)
+    pollRepeatThreshold: 3        # max times one command may appear inside the window
+    pollWindowMs: 120000          # polling window, milliseconds
     language: both                # both | zh | en (message + system-prompt language)
     announceInPrompt: true        # false = enforcement only, no prompt rule
     disabledRules: []             # switch off individual rule ids from the table
