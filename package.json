@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-sleep-not-permitted",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Forbid foreground waiting in DSH agents: sleep/wait/tail -f and blocking wait tools are rejected with a background-job retry, so the session never freezes. · 禁止 Agent 前台等待，会话不再被 sleep / wait_agent 冻住。",
   "type": "module",
   "main": "lib/index.js",

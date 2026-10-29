@@ -197,9 +197,9 @@ test('文案语言：both / zh / en', () => {
   assert.doesNotMatch(enMsg, /前台等待被禁止/)
   assert.match(en.guards[0](execFor('wait_agent', { timeout_ms: 300000 })), /5 minutes/)
 
-  assert.match(zh.sections[0].text, /前台等待禁止/)
-  assert.doesNotMatch(zh.sections[0].text, /Foreground waiting is forbidden/)
-  assert.match(en.sections[0].text, /Foreground waiting is forbidden/)
+  assert.match(zh.sections[0].text, /前台等待/)
+  assert.doesNotMatch(zh.sections[0].text, /Foreground waiting/)
+  assert.match(en.sections[0].text, /Foreground waiting/)
 
   assert.throws(() => apply(fakeCtx().ctx, { language: 'fr' }), /language/)
 })
@@ -255,7 +255,7 @@ test('系统提示包含轮询与外部等待的指引', () => {
   apply(ctx, undefined)
   assert.match(sections[0].text, /轮询/)
   assert.match(sections[0].text, /Polling|polling/)
-  assert.match(sections[0].text, /until \[ -f done \]/)
+  assert.match(sections[0].text, /run_in_background/)
 })
 
 test('交互式/需确认命令被拒（前台与后台都拒）', () => {
@@ -308,7 +308,8 @@ test('系统提示覆盖失败处理、看门狗与确认优先', () => {
   apply(ctx, undefined)
   const text = sections[0].text
   assert.match(text, /completed \/ failed \/ killed/)
-  assert.match(text, /看门狗/)
-  assert.match(text, /ask_user_question/)
-  assert.match(text, /BatchMode=yes/)
+  assert.match(text, /看门狗|watchdog/)
+  assert.match(text, /输入或确认|input or confirmation/)
+  // 提示段保持精简（官方 prompt 段普遍 100~450 字符），细节在拒绝消息里。
+  assert.ok(text.length < 1200, `prompt section too long: ${text.length}`)
 })
